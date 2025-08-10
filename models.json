@@ -1,43 +1,39 @@
 [
   {
     "id": "deepseek/deepseek-chat-v3-0324:free",
-    "name": "DeepSeek V3 (Fast)",
-    "description": "Optimized for speed and coding tasks",
+    "name": "DeepSeek V3 0324",
+    "description": "Cutting-edge reasoning model optimized for coding tasks",
     "capabilities": ["code generation", "debugging", "documentation"],
     "limitations": "Limited context window (32K tokens)",
-    "best_for": "Quick coding tasks and comparisons",
-    "performance_tier": "fast",
-    "avg_response_time": "2-4s"
+    "best_for": "Complex algorithm implementation and optimization",
+    "hf_fallback": "deepseek-ai/DeepSeek-V3-0324"
   },
   {
     "id": "qwen/qwen3-coder:free",
-    "name": "Qwen3 Coder (Fast)",
+    "name": "Qwen3 Coder",
     "description": "Specialized coding model with multi-language support",
     "capabilities": ["code completion", "refactoring", "explanation"],
     "limitations": "May struggle with very niche languages",
-    "best_for": "Multi-language projects and learning",
-    "performance_tier": "fast",
-    "avg_response_time": "2-3s"
+    "best_for": "Multi-language projects and learning resources",
+    "hf_fallback": "Qwen/Qwen2.5-Coder-7B-Instruct"
   },
   {
     "id": "deepseek/deepseek-r1-0528:free",
-    "name": "DeepSeek R1 (Reasoning - Slow)",
-    "description": "Advanced reasoning but slower response times",
-    "capabilities": ["complex reasoning", "step-by-step analysis"],
-    "limitations": "High latency, reasoning overhead",
-    "best_for": "Complex problems requiring deep analysis",
-    "performance_tier": "slow",
-    "avg_response_time": "8-15s"
+    "name": "DeepSeek R1 0528",
+    "description": "General purpose reasoning model with strong instruction following",
+    "capabilities": ["text generation", "summarization", "Q&A"],
+    "limitations": "Not specialized for coding tasks",
+    "best_for": "General programming questions and documentation",
+    "hf_fallback": "deepseek-ai/DeepSeek-R1-0528"
   },
   {
     "id": "google/gemini-2.0-flash-exp:free",
-    "name": "Gemini 2.0 Flash (Ultra Fast)",
+    "name": "Google Gemini 2.0 Flash Experimental",
     "description": "Experimental fast model with multimodal capabilities",
     "capabilities": ["image understanding", "fast response", "multiturn"],
     "limitations": "Less accurate on complex reasoning",
-    "best_for": "Quick prototypes and speed-critical tasks",
-    "performance_tier": "ultra_fast",
-    "avg_response_time": "1-2s"
+    "best_for": "Quick prototypes and visual programming tasks",
+    "hf_fallback": "google/gemma-2-9b-it"
   },
   {
     "id": "deepseek/deepseek-r1-distill-qwen-14b",
@@ -46,57 +42,51 @@
     "capabilities": ["efficient inference", "knowledge distillation"],
     "limitations": "Less creative than full models",
     "best_for": "Production systems requiring fast responses",
-    "performance_tier": "fast",
-    "avg_response_time": "3-5s"
+    "hf_fallback": "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B"
   },
   {
-    "id": "nvidia/llama-3.1-nemotron-ultra-253b-v1:free",
-    "name": "NVIDIA Nemotron (Very Slow)",
-    "description": "Massive model with high capability but very slow",
-    "capabilities": ["long-context reasoning", "advanced capabilities"],
-    "limitations": "Very high latency, resource intensive",
-    "best_for": "Research and complex analysis only",
-    "performance_tier": "very_slow",
-    "avg_response_time": "15-30s"
+    "id": "nvidia/nemotron-3.1-ultra-253b",
+    "name": "NVIDIA Llama 3.1 Nemotron Ultra 253B",
+    "description": "Massive-scale model for complex problem solving",
+    "capabilities": ["long-context reasoning", "multimodal", "advanced math"],
+    "limitations": "High latency, resource intensive",
+    "best_for": "Research and advanced algorithm development",
+    "hf_fallback": "nvidia/Llama-3_1-Nemotron-Ultra-253B-v1"
   },
   {
-    "id": "rekaai/reka-flash-3:free",
+    "id": "reka/reka-flash-3",
     "name": "Reka Flash 3",
     "description": "Specialized for rapid prototyping and iteration",
     "capabilities": ["fast iteration", "code suggestions", "error detection"],
     "limitations": "Small context window",
     "best_for": "Quick coding sessions and brainstorming",
-    "performance_tier": "ultra_fast",
-    "avg_response_time": "1-3s"
+    "hf_fallback": "microsoft/phi-4"
   },
   {
-    "id": "moonshotai/kimi-k2:free",
+    "id": "kimi/kimi-k2",
     "name": "Kimi K2",
     "description": "Optimized for Asian language support",
     "capabilities": ["multilingual", "cross-cultural context"],
     "limitations": "Weaker on Western programming paradigms",
     "best_for": "Projects targeting Asian markets",
-    "performance_tier": "fast",
-    "avg_response_time": "3-6s"
+    "hf_fallback": "moonshotai/Kimi-K2-Instruct"
   },
   {
     "id": "google/gemma-3-4b",
-    "name": "Gemma 3 4B (Ultra Fast)",
-    "description": "Lightweight yet capable model for quick responses",
+    "name": "Gemma 3 4B",
+    "description": "Lightweight yet capable model for edge devices",
     "capabilities": ["low resource", "fast startup", "efficient"],
     "limitations": "Limited complex reasoning",
-    "best_for": "Simple tasks and rapid iteration",
-    "performance_tier": "ultra_fast",
-    "avg_response_time": "1-2s"
+    "best_for": "Mobile and embedded system development",
+    "hf_fallback": "google/gemma-2-2b-it"
   },
   {
-    "id": "featherless/qwerky-72b:free",
+    "id": "qrwkv/qrwkv-72b",
     "name": "Qrwkv 72B",
     "description": "Specialized for quantum computing concepts",
     "capabilities": ["quantum algorithms", "physics simulation"],
     "limitations": "Niche domain focus",
     "best_for": "Quantum computing research and education",
-    "performance_tier": "slow",
-    "avg_response_time": "8-12s"
+    "hf_fallback": "meta-llama/Meta-Llama-3-8B-Instruct"
   }
 ]

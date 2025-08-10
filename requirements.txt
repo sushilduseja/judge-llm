@@ -1,7 +1,10 @@
-streamlit>=1.32.0,
-requests>=2.31.0,
-python-dotenv>=1.0.0,
-pydantic>=2.6.1,
-rich>=13.7.0,
-streamlit-option-menu>=0.3.12,
+streamlit>=1.32.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+pydantic>=2.6.1
+rich>=13.7.0
+streamlit-option-menu>=0.3.12
 streamlit-extras>=0.3.6
+huggingface-hub>=0.20.0
+transformers>=4.36.0
+torch>=2.0.0

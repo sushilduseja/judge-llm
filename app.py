@@ -13,12 +13,21 @@ def main():
     
     # Validate environment variables are loaded
     openrouter_key = os.getenv("OPENROUTER_API_KEY")
+    huggingface_key = os.getenv("HUGGINGFACE_API_KEY")
+    
     if not openrouter_key:
         raise SystemExit("OPENROUTER_API_KEY not found in .env file. Please check your .env file and restart.")
     
-    # Load configuration - pass the environment variable explicitly
+    # HuggingFace key is optional but warn if missing
+    if not huggingface_key:
+        print("Warning: HUGGINGFACE_API_KEY not found. Fallback functionality will be disabled.")
+    
+    # Load configuration - pass both API keys
     try:
-        config = AppConfig(openrouter_api_key=openrouter_key)
+        config = AppConfig(
+            openrouter_api_key=openrouter_key,
+            huggingface_api_key=huggingface_key
+        )
     except Exception as e:
         raise SystemExit(f"Error creating AppConfig: {str(e)}")
     

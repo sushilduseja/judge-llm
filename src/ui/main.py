@@ -10,15 +10,18 @@ from typing import Dict, Any
 from concurrent.futures import ThreadPoolExecutor
 
 from ..config.models import AppConfig, ModelCapability
-from ..services.openrouter import OpenRouterClient
+from ..services.client_manager import ClientManager
 from ..services.judge import JudgeService
 
 class UI:
     def __init__(self, config: AppConfig, models_config: Dict[str, ModelCapability]):
         self.config = config
         self.models_config = models_config
-        self.client = OpenRouterClient(config.openrouter_api_key)
-        self.judge_service = JudgeService(self.client)
+        self.client_manager = ClientManager(
+            config.openrouter_api_key, 
+            config.huggingface_api_key
+        )
+        self.judge_service = JudgeService(self.client_manager)
         self.setup_page()
 
     def setup_page(self):
@@ -51,46 +54,30 @@ class UI:
                 .main-content {
                     padding: 2rem;
                 }
+                .fallback-indicator {
+                    background-color: #fff3cd;
+                    border: 1px solid #ffeaa7;
+                    border-radius: 4px;
+                    padding: 0.5rem;
+                    margin: 0.5rem 0;
+                    font-size: 0.85em;
+                }
             </style>
         """, unsafe_allow_html=True)
 
     def render_header(self):
         st.title("🤖 Model Compare and Judge")
         st.caption(
-            "Compare different AI models and get an impartial judgment on their performance"
+            "Compare different AI models and get an impartial judgment on their performance. "
+            "Automatic fallback to HuggingFace when OpenRouter is unavailable."
         )
 
     def render_sidebar(self):
         with st.sidebar:
             st.header("⚙️ Settings")
             
-            # Performance mode selector
-            performance_mode = st.radio(
-                "⚡ Performance Mode",
-                ["Ultra Fast", "Balanced", "Quality"],
-                index=1,  # Default to Balanced
-                help="Ultra Fast: 1-3s response, Balanced: 3-6s, Quality: 6-15s"
-            )
-            
-            # Filter models by performance mode
-            if performance_mode == "Ultra Fast":
-                available_models = {k: v for k, v in self.models_config.items() 
-                                if v.performance_tier in ["ultra_fast", "fast"]}
-                default_judge = "google/gemini-2.0-flash-exp:free"
-            elif performance_mode == "Balanced":
-                available_models = {k: v for k, v in self.models_config.items() 
-                                if v.performance_tier in ["ultra_fast", "fast"]}
-                default_judge = "deepseek/deepseek-chat-v3-0324:free"
-            else:  # Quality
-                available_models = self.models_config
-                default_judge = "deepseek/deepseek-chat-v3-0324:free"  # Avoid R1 for judge
-            
+            # Model Selection with Cards
             st.subheader("Model Selection")
-            
-            # Smart defaults based on performance mode
-            model_keys = list(available_models.keys())
-            default_a_idx = 0 if model_keys else 0
-            default_b_idx = min(1, len(model_keys) - 1) if len(model_keys) > 1 else 0
             
             with stylable_container(
                 key="model_a_container",
@@ -100,19 +87,20 @@ class UI:
                         border-radius: 5px;
                         padding: 1rem;
                         margin-bottom: 1rem;
-                        background-color: #f8f9ff;
                     }
                 """
             ):
                 model_a = st.selectbox(
                     "Model A",
-                    options=model_keys,
-                    format_func=lambda x: f"{available_models[x].name} (~{available_models[x].avg_response_time})",
-                    index=default_a_idx,
+                    options=list(self.models_config.keys()),
+                    format_func=lambda x: self.models_config[x].name,
                     key="model_a"
                 )
                 if model_a:
-                    st.caption(f"🎯 {available_models[model_a].best_for}")
+                    st.caption(self.models_config[model_a].description)
+                    st.markdown("**Best for:** " + self.models_config[model_a].best_for)
+                    if self.models_config[model_a].hf_fallback:
+                        st.markdown(f"**Fallback:** {self.models_config[model_a].hf_fallback}")
             
             with stylable_container(
                 key="model_b_container",
@@ -122,58 +110,68 @@ class UI:
                         border-radius: 5px;
                         padding: 1rem;
                         margin-bottom: 1rem;
-                        background-color: #fff8f0;
                     }
                 """
             ):
                 model_b = st.selectbox(
                     "Model B",
-                    options=model_keys,
-                    format_func=lambda x: f"{available_models[x].name} (~{available_models[x].avg_response_time})",
-                    index=default_b_idx,
+                    options=list(self.models_config.keys()),
+                    format_func=lambda x: self.models_config[x].name,
                     key="model_b"
                 )
                 if model_b:
-                    st.caption(f"🎯 {available_models[model_b].best_for}")
+                    st.caption(self.models_config[model_b].description)
+                    st.markdown("**Best for:** " + self.models_config[model_b].best_for)
+                    if self.models_config[model_b].hf_fallback:
+                        st.markdown(f"**Fallback:** {self.models_config[model_b].hf_fallback}")
             
-            # Judge Settings with performance consideration
+            # Judge Settings
             st.subheader("Judge Settings")
-            
-            # Filter judge models to exclude slow reasoning models
-            judge_options = {k: v for k, v in available_models.items() 
-                            if v.performance_tier in ["ultra_fast", "fast"]}
-            
             judge_model = st.selectbox(
                 "Judge Model",
-                options=list(judge_options.keys()),
-                format_func=lambda x: f"{judge_options[x].name} (~{judge_options[x].avg_response_time})",
-                index=list(judge_options.keys()).index(default_judge) if default_judge in judge_options else 0,
-                help="Using fast models for judging to maintain responsiveness"
+                options=list(self.models_config.keys()),
+                format_func=lambda x: self.models_config[x].name,
+                index=2  # Default to DeepSeek R1
             )
             
-            # Simplified settings based on performance mode
-            if performance_mode == "Ultra Fast":
-                judge_repeats = 1
-                max_tokens = 256
-                temperature = 0.0
-                top_p = 1.0
-                http_timeout = 30
-                st.info("⚡ Ultra Fast mode: Optimized for speed")
-            elif performance_mode == "Balanced":
-                judge_repeats = 1
-                max_tokens = 512
-                temperature = 0.1
-                top_p = 0.95
-                http_timeout = 60
-                st.info("⚖️ Balanced mode: Good speed/quality balance")
-            else:  # Quality
-                with st.expander("Advanced Settings"):
-                    judge_repeats = st.number_input("Judge repeats", 1, 3, 1)
-                    max_tokens = st.number_input("Max tokens", 256, 1024, 512, step=64)
-                    temperature = st.number_input("Temperature", 0.0, 0.3, 0.1, step=0.05)
-                    top_p = st.number_input("Top p", 0.8, 1.0, 0.95, step=0.05)
-                    http_timeout = st.number_input("Timeout (s)", 30, 120, 90, step=10)
-                st.info("🎯 Quality mode: Best results, slower responses")
+            # Advanced Settings
+            with st.expander("Advanced Settings"):
+                judge_repeats = st.number_input(
+                    "Judge repeats",
+                    min_value=1,
+                    max_value=5,
+                    value=self.config.judge_repeats
+                )
+                max_tokens = st.number_input(
+                    "Max tokens",
+                    min_value=64,
+                    max_value=2048,
+                    value=self.config.max_tokens,
+                    step=64
+                )
+                temperature = st.number_input(
+                    "Temperature",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=self.config.temperature,
+                    step=0.05,
+                    format="%.2f"
+                )
+                top_p = st.number_input(
+                    "Top p",
+                    min_value=0.1,
+                    max_value=1.0,
+                    value=self.config.top_p,
+                    step=0.05,
+                    format="%.2f"
+                )
+                http_timeout = st.number_input(
+                    "HTTP timeout seconds",
+                    min_value=30,
+                    max_value=600,
+                    value=self.config.http_timeout,
+                    step=10
+                )
             
             return {
                 "model_a": model_a,
@@ -183,19 +181,20 @@ class UI:
                 "max_tokens": max_tokens,
                 "temperature": temperature,
                 "top_p": top_p,
-                "http_timeout": http_timeout,
-                "performance_mode": performance_mode
+                "http_timeout": http_timeout
             }
 
-    def stream_response_safe(self, model_id: str, prompt: str, settings: Dict[str, Any], result_queue: queue.Queue, result_key: str):
-        """Thread-safe streaming that communicates via queue"""
+    def stream_response_safe(self, model_config: ModelCapability, prompt: str, settings: Dict[str, Any], result_queue: queue.Queue, result_key: str):
+        """Thread-safe streaming with fallback support"""
         try:
             full_text = ""
             usage_info = {}
             elapsed_time = 0
+            fallback_used = False
+            fallback_model = None
             
-            for chunk in self.client.stream(
-                model_id,
+            for chunk in self.client_manager.stream_with_fallback(
+                model_config,
                 prompt,
                 max_tokens=settings["max_tokens"],
                 temperature=settings["temperature"],
@@ -210,13 +209,18 @@ class UI:
                             result_key: {
                                 "text": full_text,
                                 "partial": True,
-                                "error": None
+                                "error": None,
+                                "fallback_used": chunk.get("fallback_used", False),
+                                "fallback_model": chunk.get("fallback_model")
                             }
                         })
                     
                     if chunk.get("final"):
                         usage_info = chunk.get("usage", {})
                         elapsed_time = chunk.get("elapsed", 0)
+                        fallback_used = chunk.get("fallback_used", False)
+                        fallback_model = chunk.get("fallback_model")
+                        
                         # Send final update
                         result_queue.put({
                             result_key: {
@@ -224,7 +228,9 @@ class UI:
                                 "partial": False,
                                 "error": None,
                                 "usage": usage_info,
-                                "elapsed": elapsed_time
+                                "elapsed": elapsed_time,
+                                "fallback_used": fallback_used,
+                                "fallback_model": fallback_model
                             }
                         })
                         return
@@ -250,30 +256,21 @@ class UI:
             })
 
     def run_comparison_safe(self, prompt: str, settings: Dict[str, Any], placeholder_a, placeholder_b):
-        """Enhanced comparison with timeout, fallback, and better UX"""
+        """Safe comparison with fallback support using queue-based communication"""
+        
+        # Get model configs
+        model_config_a = self.models_config[settings["model_a"]]
+        model_config_b = self.models_config[settings["model_b"]]
         
         # Create queue for thread communication
         result_queue = queue.Queue()
-        
-        # Estimate response time based on model performance tier
-        estimated_time_a = self._estimate_response_time(settings["model_a"])
-        estimated_time_b = self._estimate_response_time(settings["model_b"])
-        max_estimated_time = max(estimated_time_a, estimated_time_b)
-        
-        # Dynamic timeout based on performance mode
-        if settings.get("performance_mode") == "Ultra Fast":
-            timeout_per_model = 15
-        elif settings.get("performance_mode") == "Balanced":
-            timeout_per_model = 30
-        else:
-            timeout_per_model = 60
         
         # Start both model requests in threads
         with ThreadPoolExecutor(max_workers=2) as executor:
             # Submit both tasks
             future_a = executor.submit(
                 self.stream_response_safe, 
-                settings["model_a"], 
+                model_config_a, 
                 prompt, 
                 settings, 
                 result_queue, 
@@ -281,7 +278,7 @@ class UI:
             )
             future_b = executor.submit(
                 self.stream_response_safe, 
-                settings["model_b"], 
+                model_config_b, 
                 prompt, 
                 settings, 
                 result_queue, 
@@ -291,48 +288,46 @@ class UI:
             # Track completion and results
             results = {"a": None, "b": None}
             completed = {"a": False, "b": False}
-            start_time = time.time()
+            fallback_info = {"a": None, "b": None}
             
-            # Enhanced progress tracking
+            # Progress tracking
             progress_container = st.container()
             with progress_container:
                 progress_bar = st.progress(0.0)
                 status_text = st.empty()
-                time_text = st.empty()
-            
-            # Initial status
-            placeholder_a.info("🚀 Starting Model A...")
-            placeholder_b.info("🚀 Starting Model B...")
             
             # Process queue updates in main thread (UI-safe)
-            timeout_occurred = False
-            while not all(completed.values()) and not timeout_occurred:
+            while not all(completed.values()):
                 try:
-                    # Check for timeout
-                    elapsed = time.time() - start_time
-                    if elapsed > timeout_per_model:
-                        timeout_occurred = True
-                        break
-                    
                     # Get update from queue with timeout
                     update = result_queue.get(timeout=0.1)
                     
                     for key, data in update.items():
                         if data["error"]:
-                            # Handle error with user-friendly message
-                            error_msg = self._format_error_message(data["error"])
+                            # Handle error
                             if key == "a":
-                                placeholder_a.error(f"❌ Model A failed: {error_msg}")
+                                placeholder_a.error(f"Error: {data['error']}")
                             else:
-                                placeholder_b.error(f"❌ Model B failed: {error_msg}")
+                                placeholder_b.error(f"Error: {data['error']}")
                             completed[key] = True
                             results[key] = None
                         
                         elif data["text"] is not None:
-                            # Update UI with response text and streaming indicator
+                            # Check for fallback usage
+                            if data.get("fallback_used"):
+                                fallback_info[key] = {
+                                    "used": True,
+                                    "model": data.get("fallback_model"),
+                                    "original_model": settings[f"model_{key}"]
+                                }
+                            
+                            # Update UI with response text
                             display_text = data["text"]
-                            if data["partial"]:
-                                display_text += " ▋"  # Cursor for streaming
+                            
+                            # Add fallback indicator if needed
+                            if fallback_info[key] and fallback_info[key]["used"]:
+                                fallback_msg = f"🔄 **Using fallback:** {fallback_info[key]['model']}\n\n"
+                                display_text = fallback_msg + display_text
                             
                             if key == "a":
                                 placeholder_a.markdown(display_text)
@@ -344,79 +339,31 @@ class UI:
                                 completed[key] = True
                                 results[key] = data["text"]
                                 
-                                # Show completion with stats
-                                model_name = settings[f"model_{key}"]
-                                completion_time = data.get("elapsed", elapsed)
-                                if key == "a":
-                                    placeholder_a.success(f"✅ Model A completed in {completion_time:.1f}s")
-                                    placeholder_a.markdown(data["text"])
-                                else:
-                                    placeholder_b.success(f"✅ Model B completed in {completion_time:.1f}s")
-                                    placeholder_b.markdown(data["text"])
+                                # Store usage info in session state
+                                if "usage" in data:
+                                    st.session_state[f"{settings[f'model_{key}']}_usage"] = data["usage"]
+                                if "elapsed" in data:
+                                    st.session_state[f"{settings[f'model_{key}']}_time"] = data["elapsed"]
                         
-                        # Update progress and time
+                        # Update progress
                         progress = sum(completed.values()) / len(completed)
                         progress_bar.progress(progress)
                         
-                        elapsed = time.time() - start_time
+                        # Update status text
                         if all(completed.values()):
-                            status_text.success("🎉 Both models completed successfully!")
-                            time_text.success(f"⏱️ Total time: {elapsed:.1f}s")
+                            status_text.text("✅ Both models completed!")
                         else:
-                            active_models = [k.upper() for k, v in completed.items() if not v]
-                            status_text.info(f"⏳ Running: Model {', '.join(active_models)}")
-                            time_text.info(f"⏱️ Elapsed: {elapsed:.1f}s / ~{max_estimated_time:.0f}s estimated")
+                            active_models = [k for k, v in completed.items() if not v]
+                            status_text.text(f"⏳ Running: Model {', '.join(active_models).upper()}")
                 
                 except queue.Empty:
                     # No updates available, continue waiting
-                    elapsed = time.time() - start_time
-                    if elapsed > timeout_per_model:
-                        timeout_occurred = True
                     continue
-            
-            # Handle timeout case
-            if timeout_occurred:
-                for key, completed_status in completed.items():
-                    if not completed_status:
-                        if key == "a":
-                            placeholder_a.warning("⏰ Model A timed out - try a faster model")
-                        else:
-                            placeholder_b.warning("⏰ Model B timed out - try a faster model")
-                        results[key] = None
             
             # Clean up progress indicators
             progress_container.empty()
             
-            return results
-
-    def _estimate_response_time(self, model_id: str) -> float:
-        """Estimate response time based on model performance tier"""
-        if model_id not in self.models_config:
-            return 10.0  # Default estimate
-        
-        tier = getattr(self.models_config[model_id], 'performance_tier', 'fast')
-        estimates = {
-            'ultra_fast': 2.0,
-            'fast': 4.0,
-            'slow': 12.0,
-            'very_slow': 25.0
-        }
-        return estimates.get(tier, 8.0)
-
-    def _format_error_message(self, error: str) -> str:
-        """Convert technical errors to user-friendly messages"""
-        error_lower = error.lower()
-        
-        if "timeout" in error_lower:
-            return "Response took too long"
-        elif "rate limit" in error_lower:
-            return "Too many requests, please wait"
-        elif "connection" in error_lower:
-            return "Connection issue, please retry"
-        elif "empty response" in error_lower:
-            return "Model returned empty response"
-        else:
-            return "Unexpected error occurred"
+            return results, fallback_info
 
     def render_main(self, settings: Dict[str, Any]):
         st.markdown("## 💭 Prompt")
@@ -447,18 +394,23 @@ class UI:
                 st.markdown(f"### Model B: {self.models_config[settings['model_b']].name}")
                 placeholder_b = st.empty()
             
-            # Run safe comparison
-            results = self.run_comparison_safe(prompt, settings, placeholder_a, placeholder_b)
+            # Run safe comparison with fallback support
+            results, fallback_info = self.run_comparison_safe(prompt, settings, placeholder_a, placeholder_b)
+            
+            # Show fallback information if used
+            if any(info and info.get("used") for info in fallback_info.values()):
+                st.info("🔄 One or more models used fallback providers due to OpenRouter limitations.")
             
             # Proceed with judgment if both responses succeeded
             if results["a"] is not None and results["b"] is not None:
                 st.markdown("### 👨‍⚖️ Judgment")
                 with st.spinner("The judge is evaluating responses..."):
+                    judge_model_config = self.models_config[settings["judge_model"]]
                     judgment = self.judge_service.judge_majority(
                         prompt,
                         results["a"],
                         results["b"],
-                        settings["judge_model"],
+                        judge_model_config,
                         settings["judge_repeats"],
                         settings["http_timeout"]
                     )
@@ -476,6 +428,12 @@ class UI:
                     # Show voting details
                     with st.expander("Voting Details"):
                         st.json(judgment["counts"])
+                        
+                        # Show if judge used fallback
+                        if "errors" in judgment:
+                            st.warning("Some judgment attempts had errors:")
+                            for error in judgment["errors"]:
+                                st.text(error)
                 else:
                     st.error("Failed to get judgment: " + str(judgment.get("reason")))
             else:

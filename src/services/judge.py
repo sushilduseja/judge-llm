@@ -1,11 +1,12 @@
 from typing import Dict, Optional, List
 import re
 import json
-from .openrouter import OpenRouterClient
+from .client_manager import ClientManager
+from ..config.models import ModelCapability
 
 class JudgeService:
-    def __init__(self, client: OpenRouterClient):
-        self.client = client
+    def __init__(self, client_manager: ClientManager):
+        self.client_manager = client_manager
 
     def _create_judge_prompt(self, prompt_text: str, out_a: str, out_b: str) -> str:
         return (
@@ -39,7 +40,7 @@ class JudgeService:
             
             # Check last few words
             words = cleaned.split()
-            for word in reversed(words[-10:]):  # Check last 10 words
+            for word in reversed(words[-5:]):  # Check last 5 words
                 if word in ("A", "B", "TIE"):
                     return word
         
@@ -53,7 +54,7 @@ class JudgeService:
             r'(?:final|answer|decision|conclusion|choice).*?\b([AB])\b',
             r'\b([AB])\s*(?:is|wins|better)',
             r'(?:candidate\s+)?([AB])(?:\s+(?:is|wins))',
-            r'([AB])(?:\s*$|\s*[.!])'  # A or B at end or before punctuation
+            r'^.*?([AB])'
         ]
         
         for pattern in patterns:
@@ -77,59 +78,16 @@ class JudgeService:
             
         return None
 
-    def _extract_response_text(self, raw_response: Dict) -> str:
-        """Extract text from API response, handling both regular and reasoning models"""
-        
-        # Try direct text field first
-        text = raw_response.get("text", "")
-        if text.strip():
-            return text
-        
-        # For reasoning models, check the raw response structure
-        raw_data = raw_response.get("raw", {})
-        if not raw_data or "choices" not in raw_data:
-            return ""
-        
-        choices = raw_data.get("choices", [])
-        if not choices:
-            return ""
-        
-        choice = choices[0]
-        message = choice.get("message", {})
-        
-        # Try content field
-        content = message.get("content", "")
-        if content.strip():
-            return content
-        
-        # For reasoning models like DeepSeek R1, check reasoning field
-        reasoning = message.get("reasoning", "")
-        if reasoning.strip():
-            # For reasoning models, the actual decision is usually at the end
-            # But we should return the full reasoning to extract the decision
-            return reasoning
-        
-        return ""
-
-    def _is_reasoning_model(self, model_id: str) -> bool:
-        """Check if model is a reasoning model that needs special handling"""
-        reasoning_keywords = ["deepseek-r1", "r1-", "reasoning", "think"]
-        model_lower = model_id.lower()
-        return any(keyword in model_lower for keyword in reasoning_keywords)
-
-    def judge_once(self, prompt_text: str, out_a: str, out_b: str, judge_model_id: str, timeout: int = 120) -> Dict:
-        """Single judgment with robust error handling"""
+    def judge_once(self, prompt_text: str, out_a: str, out_b: str, judge_model_config: ModelCapability, timeout: int = 120) -> Dict:
+        """Single judgment with robust error handling and fallback support"""
         judge_prompt = self._create_judge_prompt(prompt_text, out_a, out_b)
         
         try:
-            # Determine appropriate token count based on model type
-            if self._is_reasoning_model(judge_model_id):
-                max_tokens = 800  # Much higher for reasoning models
-            else:
-                max_tokens = 150  # Conservative for regular models
+            # Use more tokens for reasoning models like DeepSeek R1
+            max_tokens = 200 if "deepseek" in judge_model_config.id.lower() else 32
             
-            res = self.client.call(
-                judge_model_id, 
+            res = self.client_manager.call_with_fallback(
+                judge_model_config,
                 judge_prompt, 
                 max_tokens=max_tokens,
                 temperature=0.0, 
@@ -140,14 +98,31 @@ class JudgeService:
             if not res.get("ok", False):
                 return {
                     "ok": False, 
-                    "reason": f"API call failed: {res.get('error', 'Unknown error')}", 
+                    "reason": f"API call failed: {res.get('text', 'Unknown error')}", 
                     "raw": res
                 }
             
-            # Extract response text using improved method
-            response_text = self._extract_response_text(res)
+            # Extract response text - handle both regular and reasoning models
+            response_text = res.get("text", "")
             
-            if not response_text.strip():
+            # For DeepSeek R1 and other reasoning models, also check raw response
+            if not response_text and "raw" in res:
+                raw_data = res["raw"]
+                if "choices" in raw_data and raw_data["choices"]:
+                    choice = raw_data["choices"][0]
+                    message = choice.get("message", {})
+                    
+                    # Try content first, then reasoning field
+                    response_text = message.get("content", "")
+                    if not response_text:
+                        # For reasoning models, the decision might be at the end of reasoning
+                        reasoning = message.get("reasoning", "")
+                        if reasoning:
+                            # Look for decision at the end of reasoning
+                            response_text = reasoning.split()[-10:]  # Last 10 words
+                            response_text = " ".join(response_text) if response_text else reasoning
+            
+            if not response_text:
                 return {
                     "ok": False, 
                     "reason": "Empty response from judge model", 
@@ -161,15 +136,12 @@ class JudgeService:
                 return {
                     "ok": True, 
                     "decision": decision, 
-                    "raw": res,
-                    "response_text": response_text[:200]  # For debugging
+                    "raw": res
                 }
             else:
-                # Enhanced error message with actual response preview
-                response_preview = response_text[:200] + ("..." if len(response_text) > 200 else "")
                 return {
                     "ok": False, 
-                    "reason": f"Could not parse decision from response: '{response_preview}'", 
+                    "reason": f"Could not parse decision from response: '{response_text}'", 
                     "raw": res
                 }
                 
@@ -185,7 +157,7 @@ class JudgeService:
         prompt_text: str, 
         out_a: str, 
         out_b: str, 
-        judge_model_id: str, 
+        judge_model_config: ModelCapability, 
         repeats: int = 1, 
         timeout: int = 120
     ) -> Dict:
@@ -196,7 +168,7 @@ class JudgeService:
         
         for attempt in range(repeats):
             try:
-                jr = self.judge_once(prompt_text, out_a, out_b, judge_model_id, timeout=timeout)
+                jr = self.judge_once(prompt_text, out_a, out_b, judge_model_config, timeout=timeout)
                 raw_calls.append(jr)
                 
                 if jr.get("ok"):
@@ -256,32 +228,3 @@ class JudgeService:
             result["raw"] = raw_calls
             
         return result
-
-    def debug_judge_response(self, prompt_text: str, out_a: str, out_b: str, judge_model_id: str, timeout: int = 120) -> Dict:
-        """Debug method to see exactly what the judge is returning"""
-        judge_prompt = self._create_judge_prompt(prompt_text, out_a, out_b)
-        
-        print(f"Judge prompt (first 200 chars): {judge_prompt[:200]}...")
-        print(f"Using model: {judge_model_id}")
-        
-        max_tokens = 800 if self._is_reasoning_model(judge_model_id) else 150
-        
-        res = self.client.call(
-            judge_model_id, 
-            judge_prompt, 
-            max_tokens=max_tokens,
-            temperature=0.0, 
-            top_p=1.0, 
-            timeout=timeout
-        )
-        
-        print(f"Raw response: {json.dumps(res, indent=2)}")
-        
-        response_text = self._extract_response_text(res)
-        print(f"Extracted text: {response_text}")
-        
-        if response_text:
-            decision = self._extract_decision(response_text)
-            print(f"Extracted decision: {decision}")
-        
-        return res
