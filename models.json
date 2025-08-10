@@ -51,7 +51,7 @@
     "capabilities": ["long-context reasoning", "multimodal", "advanced math"],
     "limitations": "High latency, resource intensive",
     "best_for": "Research and advanced algorithm development",
-    "hf_fallback": "nvidia/Llama-3_1-Nemotron-Ultra-253B-v1"
+    "hf_fallback": "HuggingFaceH4/zephyr-7b-beta"
   },
   {
     "id": "reka/reka-flash-3",
@@ -87,6 +87,6 @@
     "capabilities": ["quantum algorithms", "physics simulation"],
     "limitations": "Niche domain focus",
     "best_for": "Quantum computing research and education",
-    "hf_fallback": "meta-llama/Meta-Llama-3-8B-Instruct"
+    "hf_fallback": "microsoft/phi-2"
   }
 ]
