@@ -1,0 +1,82 @@
+[
+  {
+    "id": "deepseek/deepseek-chat-v3-0324:free",
+    "name": "DeepSeek V3 0324",
+    "description": "Cutting-edge reasoning model optimized for coding tasks",
+    "capabilities": ["code generation", "debugging", "documentation"],
+    "limitations": "Limited context window (32K tokens)",
+    "best_for": "Complex algorithm implementation and optimization"
+  },
+  {
+    "id": "qwen/qwen3-coder:free",
+    "name": "Qwen3 Coder",
+    "description": "Specialized coding model with multi-language support",
+    "capabilities": ["code completion", "refactoring", "explanation"],
+    "limitations": "May struggle with very niche languages",
+    "best_for": "Multi-language projects and learning resources"
+  },
+  {
+    "id": "deepseek/deepseek-r1-0528:free",
+    "name": "DeepSeek R1 0528",
+    "description": "General purpose reasoning model with strong instruction following",
+    "capabilities": ["text generation", "summarization", "Q&A"],
+    "limitations": "Not specialized for coding tasks",
+    "best_for": "General programming questions and documentation"
+  },
+  {
+    "id": "google/gemini-2.0-flash-exp:free",
+    "name": "Google Gemini 2.0 Flash Experimental",
+    "description": "Experimental fast model with multimodal capabilities",
+    "capabilities": ["image understanding", "fast response", "multiturn"],
+    "limitations": "Less accurate on complex reasoning",
+    "best_for": "Quick prototypes and visual programming tasks"
+  },
+  {
+    "id": "deepseek/deepseek-r1-distill-qwen-14b",
+    "name": "DeepSeek R1 Distill Qwen 14B",
+    "description": "Distilled model balancing speed and capability",
+    "capabilities": ["efficient inference", "knowledge distillation"],
+    "limitations": "Less creative than full models",
+    "best_for": "Production systems requiring fast responses"
+  },
+  {
+    "id": "nvidia/nemotron-3.1-ultra-253b",
+    "name": "NVIDIA Llama 3.1 Nemotron Ultra 253B",
+    "description": "Massive-scale model for complex problem solving",
+    "capabilities": ["long-context reasoning", "multimodal", "advanced math"],
+    "limitations": "High latency, resource intensive",
+    "best_for": "Research and advanced algorithm development"
+  },
+  {
+    "id": "reka/reka-flash-3",
+    "name": "Reka Flash 3",
+    "description": "Specialized for rapid prototyping and iteration",
+    "capabilities": ["fast iteration", "code suggestions", "error detection"],
+    "limitations": "Small context window",
+    "best_for": "Quick coding sessions and brainstorming"
+  },
+  {
+    "id": "kimi/kimi-k2",
+    "name": "Kimi K2",
+    "description": "Optimized for Asian language support",
+    "capabilities": ["multilingual", "cross-cultural context"],
+    "limitations": "Weaker on Western programming paradigms",
+    "best_for": "Projects targeting Asian markets"
+  },
+  {
+    "id": "google/gemma-3-4b",
+    "name": "Gemma 3 4B",
+    "description": "Lightweight yet capable model for edge devices",
+    "capabilities": ["low resource", "fast startup", "efficient"],
+    "limitations": "Limited complex reasoning",
+    "best_for": "Mobile and embedded system development"
+  },
+  {
+    "id": "qrwkv/qrwkv-72b",
+    "name": "Qrwkv 72B",
+    "description": "Specialized for quantum computing concepts",
+    "capabilities": ["quantum algorithms", "physics simulation"],
+    "limitations": "Niche domain focus",
+    "best_for": "Quantum computing research and education"
+  }
+]

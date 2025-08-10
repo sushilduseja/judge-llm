@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "judge-llm"
+version = "1.0.0"
+authors = [
+  { name="Author", email="author@example.com" },
+]
+description = "A tool to compare and judge LLM model outputs"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "streamlit>=1.32.0",
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.6.1",
+    "rich>=13.7.0",
+    "streamlit-option-menu>=0.3.12",
+    "streamlit-extras>=0.3.6"
+]
+
+[project.urls]
+Homepage = "https://github.com/username/judge-llm"
+Issues = "https://github.com/username/judge-llm/issues"
