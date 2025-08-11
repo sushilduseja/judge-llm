@@ -62,9 +62,9 @@ class UI:
         }
         
         for model_id, model_config in self.models_config.items():
-            if any(cap in ["code generation", "debugging"] for cap in model_config.capabilities):
+            if any(cap in ["code generation", "debugging", "code completion"] for cap in model_config.capabilities):
                 groups["Coding Specialists"].append(model_id)
-            elif model_config.estimated_speed == "fast":
+            elif "fast" in model_config.name.lower() or "flash" in model_config.name.lower():
                 groups["Fast & Efficient"].append(model_id)
             else:
                 groups["General Purpose"].append(model_id)
@@ -82,9 +82,9 @@ class UI:
         selected_model = st.selectbox(
             label,
             options=list(self.models_config.keys()),
-            format_func=lambda x: f"{self.models_config[x].name} ({self.models_config[x].estimated_speed})",
+            format_func=lambda x: self.models_config[x].name,
             key=key,
-            index=list(self.models_config.keys()).index(default_model)
+            index=list(self.models_config.keys()).index(default_model) if default_model in self.models_config else 0
         )
         
         # Show model details
@@ -94,11 +94,13 @@ class UI:
                 st.caption(model.description)
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.markdown(f"**Speed:** {model.estimated_speed}")
                     st.markdown(f"**Best for:** {model.best_for}")
+                    capabilities_str = ", ".join(model.capabilities[:3])  # Show first 3 capabilities
+                    if len(model.capabilities) > 3:
+                        capabilities_str += "..."
+                    st.markdown(f"**Capabilities:** {capabilities_str}")
                 with col2:
-                    if model.context_window:
-                        st.markdown(f"**Context:** {model.context_window:,} tokens")
+                    st.markdown(f"**Limitations:** {model.limitations}")
                     if model.together_fallback:
                         st.markdown(f"**Fallback:** Available")
         
@@ -157,7 +159,7 @@ class UI:
                 "judge_repeats": judge_repeats,
                 "max_tokens": max_tokens,
                 "temperature": temperature,
-                "top_p": self.config.top_p,  # Keep default
+                "top_p": self.config.top_p,
                 "http_timeout": http_timeout
             }
 
@@ -193,10 +195,10 @@ class UI:
                 help=f"Time taken by {model_b_name}"
             )
         
-        # Token usage
+        # Token usage - Fixed null-safe access
         with col3:
             model_a_usage_key = f'{settings["model_a"]}_usage'
-            usage_a = st.session_state.get(model_a_usage_key, {})
+            usage_a = st.session_state.get(model_a_usage_key, {}) or {}
             st.metric(
                 "Model A Tokens",
                 usage_a.get('total_tokens', 'N/A')
@@ -204,7 +206,7 @@ class UI:
             
         with col4:
             model_b_usage_key = f'{settings["model_b"]}_usage'
-            usage_b = st.session_state.get(model_b_usage_key, {})
+            usage_b = st.session_state.get(model_b_usage_key, {}) or {}
             st.metric(
                 "Model B Tokens", 
                 usage_b.get('total_tokens', 'N/A')
@@ -324,9 +326,6 @@ class UI:
     def stream_response_safe(self, model_config: ModelCapability, prompt: str, settings: Dict[str, Any], result_queue: queue.Queue, result_key: str):
         """Thread-safe streaming with enhanced error handling"""
         try:
-            # Get optimized settings for this model
-            model_settings = self.config.get_model_settings(model_config)
-            
             full_text = ""
             usage_info = {}
             elapsed_time = 0
@@ -336,10 +335,10 @@ class UI:
             for chunk in self.client_manager.stream_with_fallback(
                 model_config,
                 prompt,
-                max_tokens=model_settings["max_tokens"],
+                max_tokens=settings["max_tokens"],
                 temperature=settings["temperature"],
                 top_p=settings["top_p"],
-                timeout=model_settings["timeout"]
+                timeout=settings["http_timeout"]
             ):
                 if chunk["ok"]:
                     if "text" in chunk:
