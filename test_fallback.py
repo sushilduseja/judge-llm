@@ -1,7 +1,8 @@
+# test_fallback.py
 #!/usr/bin/env python3
 """
 Quick test script to verify API functionality works
-Run this to test if OpenRouter and HuggingFace APIs are working correctly
+Run this to test if OpenRouter and Together AI APIs are working correctly
 """
 import os
 import json
@@ -10,13 +11,12 @@ from dotenv import load_dotenv
 from src.config.models import AppConfig, ModelCapability
 from src.services.openrouter import OpenRouterClient
 
-def test_huggingface_direct(model_id: str, prompt: str, hf_token: str):
-    """Test HuggingFace Inference Providers API directly"""
-    # Use the new Inference Providers endpoint
-    url = "https://router.huggingface.co/v1/chat/completions"
+def test_together_direct(model_id: str, prompt: str, together_token: str):
+    """Test Together AI API directly"""
+    url = "https://api.together.xyz/v1/chat/completions"
     
     headers = {
-        'Authorization': f'Bearer {hf_token}',
+        'Authorization': f'Bearer {together_token}',
         'Content-Type': 'application/json'
     }
     
@@ -33,14 +33,14 @@ def test_huggingface_direct(model_id: str, prompt: str, hf_token: str):
         "top_p": 1.0
     }
     
-    print(f"HF API call to: {url}")
+    print(f"Together API call to: {url}")
     print(f"Headers: {headers}")
     print(f"Body: {json.dumps(body, indent=2)}")
     
     try:
         response = requests.post(url, headers=headers, json=body, timeout=30)
-        print(f"HF Response status: {response.status_code}")
-        print(f"HF Response text: {response.text}")
+        print(f"Together Response status: {response.status_code}")
+        print(f"Together Response text: {response.text}")
         
         if response.status_code == 200:
             data = response.json()
@@ -60,23 +60,23 @@ def test_apis():
     
     # Get API keys
     openrouter_key = os.getenv("OPENROUTER_API_KEY")
-    hf_key = os.getenv("HUGGINGFACE_API_KEY")
+    together_key = os.getenv("TOGETHER_API_KEY")
     
     print("=== API Key Status ===")
     print(f"OpenRouter API Key: {'✓ Found' if openrouter_key else '✗ Missing'}")
-    print(f"HuggingFace API Key: {'✓ Found' if hf_key else '✗ Missing'}")
+    print(f"Together AI API Key: {'✓ Found' if together_key else '✗ Missing'}")
     
     if openrouter_key:
         print(f"OpenRouter Key Preview: {openrouter_key[:10]}...")
-    if hf_key:
-        print(f"HuggingFace Key Preview: {hf_key[:10]}...")
+    if together_key:
+        print(f"Together Key Preview: {together_key[:10]}...")
     
     print("\n" + "="*50)
     
     # Load config and models
     config = AppConfig(
         openrouter_api_key=openrouter_key or "dummy",
-        huggingface_api_key=hf_key
+        together_api_key=together_key
     )
     
     with open('models.json', 'r') as f:
@@ -93,11 +93,11 @@ def test_apis():
     test_prompt = "Write a simple hello world function in Python"
     
     # Test with ClientManager (includes fallback)
-    if openrouter_key and hf_key:
+    if openrouter_key and together_key:
         print("Testing ClientManager with fallback...")
         from src.services.client_manager import ClientManager
         
-        client_manager = ClientManager(openrouter_key, hf_key)
+        client_manager = ClientManager(openrouter_key, together_key)
         
         fallback_result = client_manager.call_with_fallback(
             test_model,
@@ -145,29 +145,29 @@ def test_apis():
     
     print("\n" + "="*50)
     
-    # Test HuggingFace
-    if hf_key:
-        print("Testing HuggingFace...")
+    # Test Together AI
+    if together_key:
+        print("Testing Together AI...")
         # Try a smaller model first
-        test_hf_model = "microsoft/phi-4"
+        test_together_model = "google/gemma-2b-it"
         
-        hf_result = test_huggingface_direct(test_hf_model, test_prompt, hf_key)
+        together_result = test_together_direct(test_together_model, test_prompt, together_key)
         
-        print(f"HuggingFace OK: {hf_result.get('ok')}")
-        if hf_result.get('ok'):
-            print("HuggingFace Success!")
-            print(f"Response preview: {hf_result.get('text', '')[:200]}")
+        print(f"Together AI OK: {together_result.get('ok')}")
+        if together_result.get('ok'):
+            print("Together AI Success!")
+            print(f"Response preview: {together_result.get('text', '')[:200]}")
         else:
-            print(f"HuggingFace Error: {hf_result.get('error')}")
+            print(f"Together AI Error: {together_result.get('error')}")
     else:
-        print("Skipping HuggingFace test (no API key)")
+        print("Skipping Together AI test (no API key)")
     
     print("\n" + "="*50)
     print("Test Summary:")
     print("1. Check that your .env file has the correct API keys")
     print("2. For OpenRouter: Add credits if you see rate limit errors")
-    print("3. For HuggingFace: Verify your token has the right permissions")
-    print("4. Make sure your HF token starts with 'hf_'")
+    print("3. For Together AI: Verify your token has the right permissions")
+    print("4. Make sure your Together token starts with the correct format")
 
 if __name__ == "__main__":
     test_apis()

@@ -1,12 +1,13 @@
+# src/services/client_manager.py
 from typing import Dict, Generator, Optional, Any
 from .openrouter import OpenRouterClient
-from .huggingface import HuggingFaceClient
+from .together_ai import TogetherAIClient
 from ..config.models import ModelCapability
 
 class ClientManager:
-    def __init__(self, openrouter_api_key: str, huggingface_api_key: Optional[str] = None):
+    def __init__(self, openrouter_api_key: str, together_api_key: Optional[str] = None):
         self.openrouter_client = OpenRouterClient(openrouter_api_key)
-        self.huggingface_client = HuggingFaceClient(huggingface_api_key)
+        self.together_client = TogetherAIClient(together_api_key)
 
     def call_with_fallback(
         self,
@@ -18,7 +19,7 @@ class ClientManager:
         timeout: int = 120,
         retries: int = 3
     ) -> Dict[str, Any]:
-        """Call OpenRouter first, fallback to HuggingFace if needed"""
+        """Call OpenRouter first, fallback to Together AI if needed"""
         
         # Try OpenRouter first
         result = self.openrouter_client.call(
@@ -31,13 +32,13 @@ class ClientManager:
             retries
         )
         
-        # Check if we need fallback - trigger on any failure if HF fallback exists
-        if not result["ok"] and model_config.hf_fallback:
-            print(f"OpenRouter failed, trying HuggingFace fallback: {model_config.hf_fallback}")
+        # Check if we need fallback - trigger on any failure if Together fallback exists
+        if not result["ok"] and model_config.together_fallback:
+            print(f"OpenRouter failed, trying Together AI fallback: {model_config.together_fallback}")
             
-            # Try HuggingFace fallback
-            hf_result = self.huggingface_client.call(
-                model_config.hf_fallback,
+            # Try Together AI fallback
+            together_result = self.together_client.call(
+                model_config.together_fallback,
                 prompt_text,
                 max_tokens,
                 temperature,
@@ -46,19 +47,19 @@ class ClientManager:
                 retries
             )
             
-            print(f"HuggingFace result OK: {hf_result.get('ok')}")
+            print(f"Together AI result OK: {together_result.get('ok')}")
             
-            if hf_result["ok"]:
+            if together_result["ok"]:
                 # Mark as fallback response
-                hf_result["fallback_used"] = True
-                hf_result["fallback_model"] = model_config.hf_fallback
-                hf_result["original_error"] = result.get("text", "OpenRouter failed")
-                return hf_result
+                together_result["fallback_used"] = True
+                together_result["fallback_model"] = model_config.together_fallback
+                together_result["original_error"] = result.get("text", "OpenRouter failed")
+                return together_result
             else:
                 # Both failed, return original error with fallback info
                 result["fallback_attempted"] = True
-                result["fallback_error"] = hf_result.get("text", "HuggingFace also failed")
-                print(f"HuggingFace also failed: {hf_result.get('text')}")
+                result["fallback_error"] = together_result.get("text", "Together AI also failed")
+                print(f"Together AI also failed: {together_result.get('text')}")
         
         return result
 
@@ -72,7 +73,7 @@ class ClientManager:
         timeout: int = 120,
         retries: int = 3
     ) -> Generator[Dict[str, Any], None, None]:
-        """Stream from OpenRouter first, fallback to HuggingFace if needed"""
+        """Stream from OpenRouter first, fallback to Together AI if needed"""
         
         # Try OpenRouter streaming first
         openrouter_failed = False
@@ -103,13 +104,13 @@ class ClientManager:
             openrouter_failed = True
             original_error = str(e)
         
-        # If OpenRouter failed and we have a fallback, try HuggingFace
-        if needs_fallback and model_config.hf_fallback:
-            yield {"ok": True, "text": f"\n\n[Primary model failed: {original_error}. Switching to fallback: {model_config.hf_fallback}]\n\n"}
+        # If OpenRouter failed and we have a fallback, try Together AI
+        if needs_fallback and model_config.together_fallback:
+            yield {"ok": True, "text": f"\n\n[Primary model failed: {original_error}. Switching to fallback: {model_config.together_fallback}]\n\n"}
             
             try:
-                for chunk in self.huggingface_client.stream(
-                    model_config.hf_fallback,
+                for chunk in self.together_client.stream(
+                    model_config.together_fallback,
                     prompt_text,
                     max_tokens,
                     temperature,
@@ -119,7 +120,7 @@ class ClientManager:
                 ):
                     if chunk.get("final"):
                         chunk["fallback_used"] = True
-                        chunk["fallback_model"] = model_config.hf_fallback
+                        chunk["fallback_model"] = model_config.together_fallback
                         chunk["original_error"] = original_error
                     yield chunk
             except Exception as e:

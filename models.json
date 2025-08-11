@@ -6,7 +6,7 @@
     "capabilities": ["code generation", "debugging", "documentation"],
     "limitations": "Limited context window (32K tokens)",
     "best_for": "Complex algorithm implementation and optimization",
-    "hf_fallback": "deepseek-ai/DeepSeek-V3-0324"
+    "together_fallback": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
   },
   {
     "id": "qwen/qwen3-coder:free",
@@ -15,7 +15,7 @@
     "capabilities": ["code completion", "refactoring", "explanation"],
     "limitations": "May struggle with very niche languages",
     "best_for": "Multi-language projects and learning resources",
-    "hf_fallback": "Qwen/Qwen2.5-Coder-7B-Instruct"
+    "together_fallback": "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"
   },
   {
     "id": "deepseek/deepseek-r1-0528:free",
@@ -24,7 +24,7 @@
     "capabilities": ["text generation", "summarization", "Q&A"],
     "limitations": "Not specialized for coding tasks",
     "best_for": "General programming questions and documentation",
-    "hf_fallback": "deepseek-ai/DeepSeek-R1-0528"
+    "together_fallback": "deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free"
   },
   {
     "id": "google/gemini-2.0-flash-exp:free",
@@ -33,7 +33,7 @@
     "capabilities": ["image understanding", "fast response", "multiturn"],
     "limitations": "Less accurate on complex reasoning",
     "best_for": "Quick prototypes and visual programming tasks",
-    "hf_fallback": "google/gemma-2-9b-it"
+    "together_fallback": "google/gemma-2b-it"
   },
   {
     "id": "deepseek/deepseek-r1-distill-qwen-14b",
@@ -42,7 +42,7 @@
     "capabilities": ["efficient inference", "knowledge distillation"],
     "limitations": "Less creative than full models",
     "best_for": "Production systems requiring fast responses",
-    "hf_fallback": "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B"
+    "together_fallback": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
   },
   {
     "id": "nvidia/nemotron-3.1-ultra-253b",
@@ -51,7 +51,7 @@
     "capabilities": ["long-context reasoning", "multimodal", "advanced math"],
     "limitations": "High latency, resource intensive",
     "best_for": "Research and advanced algorithm development",
-    "hf_fallback": "HuggingFaceH4/zephyr-7b-beta"
+    "together_fallback": "nim/meta/llama-3.2-90b-vision-instruct"
   },
   {
     "id": "reka/reka-flash-3",
@@ -60,7 +60,7 @@
     "capabilities": ["fast iteration", "code suggestions", "error detection"],
     "limitations": "Small context window",
     "best_for": "Quick coding sessions and brainstorming",
-    "hf_fallback": "microsoft/phi-4"
+    "together_fallback": "mistralai/Devstral-Small-2505"
   },
   {
     "id": "kimi/kimi-k2",
@@ -69,7 +69,7 @@
     "capabilities": ["multilingual", "cross-cultural context"],
     "limitations": "Weaker on Western programming paradigms",
     "best_for": "Projects targeting Asian markets",
-    "hf_fallback": "moonshotai/Kimi-K2-Instruct"
+    "together_fallback": "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"
   },
   {
     "id": "google/gemma-3-4b",
@@ -78,7 +78,7 @@
     "capabilities": ["low resource", "fast startup", "efficient"],
     "limitations": "Limited complex reasoning",
     "best_for": "Mobile and embedded system development",
-    "hf_fallback": "google/gemma-2-2b-it"
+    "together_fallback": "google/gemma-2b-it"
   },
   {
     "id": "qrwkv/qrwkv-72b",
@@ -87,6 +87,6 @@
     "capabilities": ["quantum algorithms", "physics simulation"],
     "limitations": "Niche domain focus",
     "best_for": "Quantum computing research and education",
-    "hf_fallback": "microsoft/phi-2"
+    "together_fallback": "meta-llama/Llama-Vision-Free"
   }
 ]

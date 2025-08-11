@@ -1,3 +1,4 @@
+# src/config/models.py
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
@@ -8,11 +9,11 @@ class ModelCapability(BaseModel):
     capabilities: List[str] = Field(default_factory=list, description="List of model capabilities")
     limitations: str = Field(..., description="Known limitations")
     best_for: str = Field(..., description="Best use cases")
-    hf_fallback: Optional[str] = Field(default=None, description="HuggingFace fallback model ID")
+    together_fallback: Optional[str] = Field(default=None, description="Together AI fallback model ID")
 
 class AppConfig(BaseModel):
     openrouter_api_key: str = Field(..., env="OPENROUTER_API_KEY")
-    huggingface_api_key: Optional[str] = Field(default=None, env="HUGGINGFACE_API_KEY")
+    together_api_key: Optional[str] = Field(default=None, env="TOGETHER_API_KEY")
     model_a: str = Field(default="mistralai/devstral-small-2505:free", env="MODEL_A")
     model_b: str = Field(default="qwen/qwen3-8b:free", env="MODEL_B")
     judge_model: str = Field(default="deepseek/deepseek-r1:free", env="JUDGE_MODEL")

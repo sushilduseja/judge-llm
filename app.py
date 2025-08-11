@@ -1,3 +1,4 @@
+# app.py
 #!/usr/bin/env python3
 import os
 import json
@@ -13,20 +14,20 @@ def main():
     
     # Validate environment variables are loaded
     openrouter_key = os.getenv("OPENROUTER_API_KEY")
-    huggingface_key = os.getenv("HUGGINGFACE_API_KEY")
+    together_key = os.getenv("TOGETHER_API_KEY")
     
     if not openrouter_key:
         raise SystemExit("OPENROUTER_API_KEY not found in .env file. Please check your .env file and restart.")
     
-    # HuggingFace key is optional but warn if missing
-    if not huggingface_key:
-        print("Warning: HUGGINGFACE_API_KEY not found. Fallback functionality will be disabled.")
+    # Together API key is optional but warn if missing
+    if not together_key:
+        print("Warning: TOGETHER_API_KEY not found. Fallback functionality will be disabled.")
     
     # Load configuration - pass both API keys
     try:
         config = AppConfig(
             openrouter_api_key=openrouter_key,
-            huggingface_api_key=huggingface_key
+            together_api_key=together_key
         )
     except Exception as e:
         raise SystemExit(f"Error creating AppConfig: {str(e)}")

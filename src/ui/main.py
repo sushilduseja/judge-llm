@@ -1,3 +1,4 @@
+# src/ui/main.py
 from pathlib import Path
 import streamlit as st
 from streamlit_option_menu import option_menu
@@ -19,7 +20,7 @@ class UI:
         self.models_config = models_config
         self.client_manager = ClientManager(
             config.openrouter_api_key, 
-            config.huggingface_api_key
+            config.together_api_key
         )
         self.judge_service = JudgeService(self.client_manager)
         self.setup_page()
@@ -69,7 +70,7 @@ class UI:
         st.title("🤖 Model Compare and Judge")
         st.caption(
             "Compare different AI models and get an impartial judgment on their performance. "
-            "Automatic fallback to HuggingFace when OpenRouter is unavailable."
+            "Automatic fallback to Together AI when OpenRouter is unavailable."
         )
 
     def render_sidebar(self):
@@ -99,8 +100,8 @@ class UI:
                 if model_a:
                     st.caption(self.models_config[model_a].description)
                     st.markdown("**Best for:** " + self.models_config[model_a].best_for)
-                    if self.models_config[model_a].hf_fallback:
-                        st.markdown(f"**Fallback:** {self.models_config[model_a].hf_fallback}")
+                    if self.models_config[model_a].together_fallback:
+                        st.markdown(f"**Fallback:** {self.models_config[model_a].together_fallback}")
             
             with stylable_container(
                 key="model_b_container",
@@ -122,8 +123,8 @@ class UI:
                 if model_b:
                     st.caption(self.models_config[model_b].description)
                     st.markdown("**Best for:** " + self.models_config[model_b].best_for)
-                    if self.models_config[model_b].hf_fallback:
-                        st.markdown(f"**Fallback:** {self.models_config[model_b].hf_fallback}")
+                    if self.models_config[model_b].together_fallback:
+                        st.markdown(f"**Fallback:** {self.models_config[model_b].together_fallback}")
             
             # Judge Settings
             st.subheader("Judge Settings")
