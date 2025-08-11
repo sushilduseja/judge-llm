@@ -6,53 +6,88 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from src.config.models import AppConfig, ModelCapability
+from src.services.client_manager import ClientManager
+from src.services.model_validator import ModelValidator
 from src.ui.main import UI
 
+def load_and_validate_models(client_manager: ClientManager) -> dict:
+    """Load models and validate they're accessible"""
+    try:
+        with open('models.json', 'r') as f:
+            models_data = json.load(f)
+    except FileNotFoundError:
+        raise SystemExit("❌ models.json not found")
+    except json.JSONDecodeError as e:
+        raise SystemExit(f"❌ Invalid JSON in models.json: {e}")
+    
+    # Parse model configurations
+    models_config = {}
+    for model in models_data:
+        try:
+            models_config[model["id"]] = ModelCapability(**model)
+        except Exception as e:
+            print(f"⚠️ Skipping invalid model config {model.get('id', 'unknown')}: {e}")
+    
+    if not models_config:
+        raise SystemExit("❌ No valid models found in models.json")
+    
+    print(f"📊 Loaded {len(models_config)} model configurations")
+    
+    # Optional: Validate models (comment out for faster startup)
+    # print("🔍 Validating model accessibility...")
+    # validator = ModelValidator(client_manager)
+    # working_models = validator.get_working_models(models_config)
+    # 
+    # if len(working_models) < len(models_config):
+    #     print(f"⚠️ {len(models_config) - len(working_models)} models failed validation")
+    # 
+    # if len(working_models) < 2:
+    #     raise SystemExit("❌ Need at least 2 working models for comparison")
+    # 
+    # return working_models
+    
+    return models_config
+
 def main():
-    # Load environment variables FIRST
+    print("🚀 Starting Judge LLM...")
+    
+    # Load environment variables
     load_dotenv()
     
-    # Validate environment variables are loaded
+    # Validate API keys
     openrouter_key = os.getenv("OPENROUTER_API_KEY")
     together_key = os.getenv("TOGETHER_API_KEY")
     
     if not openrouter_key:
-        raise SystemExit("OPENROUTER_API_KEY not found in .env file. Please check your .env file and restart.")
+        raise SystemExit("❌ OPENROUTER_API_KEY not found. Please check your .env file.")
     
-    # Together API key is optional but warn if missing
     if not together_key:
-        print("Warning: TOGETHER_API_KEY not found. Fallback functionality will be disabled.")
+        print("⚠️ TOGETHER_API_KEY not found. Fallback functionality will be disabled.")
+    else:
+        print("✅ Both API keys found")
     
-    # Load configuration - pass both API keys
+    # Create configuration
     try:
         config = AppConfig(
             openrouter_api_key=openrouter_key,
             together_api_key=together_key
         )
+        print("✅ Configuration loaded")
     except Exception as e:
-        raise SystemExit(f"Error creating AppConfig: {str(e)}")
+        raise SystemExit(f"❌ Configuration error: {e}")
     
-    # Load model configurations
-    try:
-        with open('models.json', 'r') as f:
-            models_data = json.load(f)
-            
-        models_config = {
-            model["id"]: ModelCapability(**model)
-            for model in models_data
-        }
-    except FileNotFoundError:
-        raise SystemExit("models.json not found")
-    except json.JSONDecodeError:
-        raise SystemExit("Invalid JSON in models.json")
-    except Exception as e:
-        raise SystemExit(f"Error loading model configuration: {str(e)}")
+    # Initialize services
+    client_manager = ClientManager(openrouter_key, together_key)
     
-    # Initialize output directory
+    # Load and validate models
+    models_config = load_and_validate_models(client_manager)
+    
+    # Create output directory
     OUT_DIR = Path("arena_results")
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     
-    # Initialize and run UI
+    # Launch UI
+    print("🎨 Launching UI...")
     ui = UI(config, models_config)
     ui.render()
 
