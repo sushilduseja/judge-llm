@@ -1,4 +1,4 @@
-# Judge LLM — AI Model Arena
+# Judge LLM - AI Model Arena
 
 Compare AI models side-by-side, get impartial judgments, and discover which model works best for your tasks. Uses Groq for primary inference with automatic fallback to Together AI.
 
@@ -6,7 +6,7 @@ Compare AI models side-by-side, get impartial judgments, and discover which mode
 
 ### Prerequisites
 - Python 3.10+
-- Groq API key (required — [console.groq.com](https://console.groq.com))
+- Groq API key (required, from [console.groq.com](https://console.groq.com))
 - Together AI API key (optional, for fallback)
 
 ### Setup
@@ -23,14 +23,14 @@ uv run streamlit run app.py
 # Open http://localhost:8501
 ```
 
-## Screenshot
+## Interface Preview
 
-![Screenshot](screenshot.png)
+![Judge LLM Application](docs/app-preview.png)
 
 ## How to Use
 
 1. Pick two AI models to compare (defaults to smaller models; judge is always the strongest)
-2. Enter a prompt — or pick from 12 pre-built code-gen templates
+2. Enter a prompt, or pick from 12 pre-built code-gen templates
 3. Both models respond in real-time
 4. An AI judge evaluates and declares a winner
 5. Use **Clear** to reset the UI to initial state
@@ -60,7 +60,7 @@ class ClientManager:
         return result
 ```
 
-Groq is the primary provider. If it fails and the model config specifies a `together_fallback`, the manager silently retries with Together AI. Clients are injected as `LLMClient` protocol implementations — `GroqClient` and `TogetherAIClient` are the two adapters.
+Groq is the primary provider. If it fails and the model config specifies a `together_fallback`, the manager silently retries with Together AI. Clients are injected as `LLMClient` protocol implementations. `GroqClient` and `TogetherAIClient` are the two adapters.
 
 ### Response Types
 
