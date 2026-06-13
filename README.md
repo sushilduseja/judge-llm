@@ -1,4 +1,4 @@
-# Judge LLM - AI Model Arena
+# Judge LLM - AI Model Arena [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sushilduseja/judge-llm)
 
 Compare AI models side-by-side, get impartial judgments, and discover which model works best for your tasks. Uses Groq for primary inference with automatic fallback to Together AI.
 
