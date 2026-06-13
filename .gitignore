@@ -40,6 +40,7 @@ arena_results/
 *.log
 .coverage
 htmlcov/
+.pytest_cache/
 
 # OS
 .DS_Store

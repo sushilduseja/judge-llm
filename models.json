@@ -1,47 +1,38 @@
 [
   {
-    "id": "deepseek/deepseek-chat",
-    "name": "DeepSeek Chat",
-    "description": "Advanced reasoning model for coding and analysis",
+    "id": "llama-3.3-70b-versatile",
+    "name": "Llama 3.3 70B",
+    "description": "Meta's versatile model via Groq. Strong all-rounder for coding, reasoning, and analysis.",
     "capabilities": ["code generation", "debugging", "reasoning"],
-    "limitations": "May have rate limits on free tier",
+    "limitations": "Free tier has rate limits",
     "best_for": "Complex coding tasks and problem solving",
-    "together_fallback": "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"
+    "together_fallback": "meta-llama/Llama-3.3-70B-Instruct-Turbo"
   },
   {
-    "id": "mistralai/mistral-7b-instruct:free",
-    "name": "Mistral 7B Instruct",
-    "description": "Fast and efficient general-purpose model",
-    "capabilities": ["general chat", "code assistance", "reasoning"],
-    "limitations": "Smaller model size",
-    "best_for": "Quick responses and general tasks",
-    "together_fallback": "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"
-  },
-  {
-    "id": "google/gemma-2-9b-it:free",
-    "name": "Gemma 2 9B",
-    "description": "Google's efficient instruction-tuned model",
-    "capabilities": ["instruction following", "coding", "analysis"],
-    "limitations": "Limited to instruction-following tasks",
-    "best_for": "Structured tasks and code generation",
-    "together_fallback": "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"
-  },
-  {
-    "id": "meta-llama/llama-3.1-8b-instruct:free",
+    "id": "llama-3.1-8b-instant",
     "name": "Llama 3.1 8B",
-    "description": "Meta's latest efficient model",
+    "description": "Meta's efficient model via Groq. Fast responses with solid general-purpose performance.",
     "capabilities": ["general purpose", "reasoning", "coding"],
     "limitations": "8B parameter size",
     "best_for": "Balanced performance across tasks",
-    "together_fallback": "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"
+    "together_fallback": "meta-llama/Llama-3.3-70B-Instruct-Turbo"
   },
   {
-    "id": "openai/gpt-3.5-turbo",
-    "name": "GPT-3.5 Turbo",
-    "description": "OpenAI's efficient model via OpenRouter",
-    "capabilities": ["general purpose", "coding", "analysis"],
-    "limitations": "Older generation model",
-    "best_for": "Reliable general-purpose tasks",
-    "together_fallback": "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"
+    "id": "qwen/qwen3-32b",
+    "name": "Qwen 3 32B",
+    "description": "Alibaba's Qwen3 model via Groq. Strong reasoning and coding capability.",
+    "capabilities": ["reasoning", "code generation", "analysis"],
+    "limitations": "Newer model, may have edge cases",
+    "best_for": "Complex reasoning and analysis tasks",
+    "together_fallback": "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+  },
+  {
+    "id": "meta-llama/llama-4-scout-17b-16e-instruct",
+    "name": "Llama 4 Scout 17B",
+    "description": "Meta's latest Scout model via Groq. Efficient with strong instruction following.",
+    "capabilities": ["general purpose", "instruction following", "coding"],
+    "limitations": "Newly released, rapidly evolving",
+    "best_for": "Instruction following and general tasks",
+    "together_fallback": "meta-llama/Llama-3.3-70B-Instruct-Turbo"
   }
 ]

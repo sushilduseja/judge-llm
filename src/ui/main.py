@@ -1,11 +1,9 @@
 # src/ui/main.py
 from pathlib import Path
 import streamlit as st
-from streamlit_option_menu import option_menu
-from streamlit_extras.stylable_container import stylable_container
+
 import json
 import queue
-import threading
 import time
 from typing import Dict, Any, List
 from concurrent.futures import ThreadPoolExecutor
@@ -19,11 +17,20 @@ class UI:
         self.config = config
         self.models_config = models_config
         self.client_manager = ClientManager(
-            config.openrouter_api_key, 
+            config.groq_api_key,
             config.together_api_key
         )
         self.judge_service = JudgeService(self.client_manager)
         self.setup_page()
+
+    @staticmethod
+    def _clear():
+        st.session_state.prompt_input = ""
+        for k in ("model_a", "model_b", "judge_model"):
+            st.session_state.pop(k, None)
+        for k in list(st.session_state.keys()):
+            if k.endswith(("_time", "_usage")):
+                st.session_state.pop(k, None)
 
     def setup_page(self):
         st.set_page_config(
@@ -84,7 +91,6 @@ class UI:
             options=list(self.models_config.keys()),
             format_func=lambda x: self.models_config[x].name,
             key=key,
-            index=list(self.models_config.keys()).index(default_model) if default_model in self.models_config else 0
         )
         
         # Show model details
@@ -113,18 +119,25 @@ class UI:
             # Model Selection with improved UX
             st.subheader("Model Selection")
             
-            # Ensure different models are selected
+            model_keys = list(self.models_config.keys())
+            weaker = [k for k in model_keys if '70b' not in k.lower() and 'qwen3-32b' not in k.lower()]
+            stronger = [k for k in model_keys if k not in weaker]
+            default_judge = stronger[0] if stronger else model_keys[0]
+            default_a = weaker[0] if len(weaker) > 0 else model_keys[0]
+            default_b = weaker[1] if len(weaker) > 1 else (weaker[0] if weaker else model_keys[-1])
+            
             if 'model_a' not in st.session_state:
-                st.session_state.model_a = list(self.models_config.keys())[0]
+                st.session_state.model_a = default_a
             if 'model_b' not in st.session_state:
-                models_list = list(self.models_config.keys())
-                st.session_state.model_b = models_list[1] if len(models_list) > 1 else models_list[0]
+                st.session_state.model_b = default_b
+            if 'judge_model' not in st.session_state:
+                st.session_state.judge_model = default_judge
             
-            with stylable_container(key="model_a_container", css_styles="{ border: 2px solid #007bff; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }"):
-                model_a = self.render_model_selector("🥊 Model A", "model_a", "Coding Specialists")
+            with st.container():
+                model_a = self.render_model_selector("Model A", "model_a", "Coding Specialists")
             
-            with stylable_container(key="model_b_container", css_styles="{ border: 2px solid #28a745; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }"):
-                model_b = self.render_model_selector("🥊 Model B", "model_b", "General Purpose")
+            with st.container():
+                model_b = self.render_model_selector("Model B", "model_b", "General Purpose")
             
             # Auto-fix if same model selected
             if model_a == model_b:
@@ -134,11 +147,12 @@ class UI:
                     st.rerun()
             
             # Judge Settings
-            st.subheader("🧑‍⚖️ Judge Settings")
+            st.subheader("Judge Settings")
             judge_model = st.selectbox(
                 "Judge Model",
                 options=list(self.models_config.keys()),
                 format_func=lambda x: self.models_config[x].name,
+                key="judge_model",
                 help="Model used to evaluate and compare responses"
             )
             
@@ -215,30 +229,33 @@ class UI:
     def render_main(self, settings: Dict[str, Any]):
         st.markdown("## 💭 Enter Your Prompt")
         
-        # Prompt templates for quick start
-        with st.expander("📝 Quick Start Templates"):
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                if st.button("🐍 Python Function"):
-                    st.session_state.prompt_text = "Write a Python function to calculate the factorial of a number using recursion."
-            with col2:
-                if st.button("🐛 Debug Code"):
-                    st.session_state.prompt_text = "Debug this Python code:\n\ndef fibonacci(n):\n    if n <= 1:\n        return n\n    return fibonacci(n-1) + fibonacci(n-2)\n\nprint(fibonacci(50))  # This is very slow"
-            with col3:
-                if st.button("📚 Explain Concept"):
-                    st.session_state.prompt_text = "Explain how binary search works and provide a Python implementation."
+        with st.expander("Quick Start Templates"):
+            cols = st.columns(4)
+            templates = [
+                ("SQL", "Write a query to find the top 5 customers by lifetime value, including their last order date and total order count."),
+                ("React", "Write a useDebounce custom hook in TypeScript that accepts a value and delay, and returns the debounced value."),
+                ("Async", "Write an async Python function that fetches 100 URLs concurrently using asyncio and aiohttp, returning results with error handling."),
+                ("Docker", "Write a multi-stage Dockerfile for a Rust web server: build stage with rust:latest, runtime with debian:stable-slim, copy the binary, expose port 8080."),
+                ("Regex", "Write a Python function using re that extracts all valid email addresses and their domains from a raw text string."),
+                ("Decorator", "Write a Python retry decorator with exponential backoff, configurable max retries, and optional exception type filtering."),
+                ("CSS", "Write a responsive CSS grid layout for a dashboard with a sidebar, top navbar, and 4 resizable content panels using grid-template-areas."),
+                ("TypeScript", "Write a DeepPartial generic type in TypeScript that recursively makes all properties optional, including nested objects."),
+                ("CLI", "Write a Python CLI tool using argparse that watches a directory for new .log files, tail -f them, and rotates output every 10MB."),
+                ("CI", "Write a GitHub Actions workflow that lints, type-checks, tests with pytest, and publishes a Python package to PyPI on tag push."),
+                ("SQLAlchemy", "Write SQLAlchemy 2.0 models for a multi-tenant SaaS app: Tenant, User, Project, with proper relationships, indexes, and a composite unique constraint."),
+                ("FastAPI", "Write a FastAPI endpoint with pagination, filtering, sorting, and OpenAPI response models for a /users list endpoint."),
+            ]
+            for i, (label, template) in enumerate(templates):
+                with cols[i % 4]:
+                    if st.button(label, key=f"tmpl_{i}", use_container_width=True):
+                        st.session_state.prompt_input = template
         
         prompt = st.text_area(
             "Enter your prompt",
             height=200,
             placeholder="Ask both models to solve a problem, write code, or explain a concept...",
-            value=st.session_state.get('prompt_text', ''),
-            key='prompt_input'
+            key="prompt_input"
         )
-        
-        # Update session state
-        if prompt != st.session_state.get('prompt_text', ''):
-            st.session_state.prompt_text = prompt
         
         # Show model comparison
         if settings["model_a"] != settings["model_b"]:
@@ -248,9 +265,15 @@ class UI:
             with col2:
                 st.info(f"🥊 **Model B:** {self.models_config[settings['model_b']].name}")
         
-        if st.button("🚀 Compare Models", use_container_width=True, type="primary"):
+        col_compare, col_clear = st.columns([4, 1])
+        with col_compare:
+            run = st.button("Compare Models", use_container_width=True, type="primary")
+        with col_clear:
+            st.button("Clear", use_container_width=True, on_click=self._clear)
+        
+        if run:
             if not prompt.strip():
-                st.warning("⚠️ Please enter a prompt first")
+                st.warning("Enter a prompt first")
                 return
             
             # Create response layout
@@ -268,8 +291,10 @@ class UI:
             results, fallback_info = self.run_comparison_safe(prompt, settings, placeholder_a, placeholder_b)
             
             # Show fallback info
-            if any(info and info.get("used") for info in fallback_info.values()):
-                st.warning("🔄 **Fallback Used:** Some models used Together AI due to OpenRouter issues.")
+            for key, info in fallback_info.items():
+                if info and info.get("used"):
+                    model_name = self.models_config[settings[f"model_{key}"]].name
+                    st.info(f"⚡ {model_name} responded via fallback ({info['model']})", icon="🔄")
             
             # Show metrics
             self.render_results_with_metrics(results, fallback_info, settings)
@@ -324,13 +349,9 @@ class UI:
                     st.error(f"❌ Judgment failed: {judgment.get('reason', 'Unknown error')}")
 
     def stream_response_safe(self, model_config: ModelCapability, prompt: str, settings: Dict[str, Any], result_queue: queue.Queue, result_key: str):
-        """Thread-safe streaming with enhanced error handling"""
         try:
             full_text = ""
-            usage_info = {}
-            elapsed_time = 0
-            fallback_used = False
-            fallback_model = None
+            fallback_active = False
             
             for chunk in self.client_manager.stream_with_fallback(
                 model_config,
@@ -340,44 +361,52 @@ class UI:
                 top_p=settings["top_p"],
                 timeout=settings["http_timeout"]
             ):
-                if chunk["ok"]:
-                    if "text" in chunk:
-                        full_text += chunk["text"]
+                if chunk.fallback_used and not fallback_active:
+                    fallback_active = True
+                    full_text = ""
+                    result_queue.put({
+                        result_key: {
+                            "text": "",
+                            "partial": True,
+                            "error": None,
+                            "reset": True,
+                            "fallback_used": True,
+                            "fallback_model": chunk.fallback_model,
+                        }
+                    })
+                
+                if chunk.ok:
+                    if chunk.text:
+                        full_text += chunk.text
                         result_queue.put({
                             result_key: {
                                 "text": full_text,
                                 "partial": True,
                                 "error": None,
-                                "fallback_used": chunk.get("fallback_used", False),
-                                "fallback_model": chunk.get("fallback_model")
+                                "fallback_used": chunk.fallback_used,
+                                "fallback_model": chunk.fallback_model,
                             }
                         })
                     
-                    if chunk.get("final"):
-                        usage_info = chunk.get("usage", {})
-                        elapsed_time = chunk.get("elapsed", 0)
-                        fallback_used = chunk.get("fallback_used", False)
-                        fallback_model = chunk.get("fallback_model")
-                        
+                    if chunk.final:
                         result_queue.put({
                             result_key: {
                                 "text": full_text,
                                 "partial": False,
                                 "error": None,
-                                "usage": usage_info,
-                                "elapsed": elapsed_time,
-                                "fallback_used": fallback_used,
-                                "fallback_model": fallback_model
+                                "usage": chunk.usage,
+                                "elapsed": chunk.elapsed,
+                                "fallback_used": chunk.fallback_used,
+                                "fallback_model": chunk.fallback_model,
                             }
                         })
                         return
                 else:
-                    error_msg = chunk.get('text', 'Unknown error')
                     result_queue.put({
                         result_key: {
                             "text": None,
                             "partial": False,
-                            "error": error_msg
+                            "error": chunk.error or "Unknown error",
                         }
                     })
                     return
@@ -451,8 +480,13 @@ class UI:
                             completed[key] = True
                             results[key] = None
                         
+                        elif data.get("reset"):
+                            if key == "a":
+                                placeholder_a.empty()
+                            else:
+                                placeholder_b.empty()
+                        
                         elif data["text"] is not None:
-                            # Track fallback usage
                             if data.get("fallback_used"):
                                 fallback_info[key] = {
                                     "used": True,
@@ -460,13 +494,8 @@ class UI:
                                     "original_model": settings[f"model_{key}"]
                                 }
                             
-                            # Prepare display text
                             display_text = data["text"]
-                            if fallback_info[key] and fallback_info[key]["used"]:
-                                fallback_msg = f"🔄 **Fallback:** {fallback_info[key]['model']}\n\n---\n\n"
-                                display_text = fallback_msg + display_text
                             
-                            # Update UI
                             if key == "a":
                                 placeholder_a.markdown(display_text)
                                 if not data["partial"]:
@@ -520,13 +549,13 @@ class UI:
         # Show API status
         col1, col2 = st.columns(2)
         with col1:
-            if self.config.openrouter_api_key:
-                st.success("✅ OpenRouter Connected")
+            if self.config.groq_api_key:
+                st.success("✅ Groq Connected")
             else:
-                st.error("❌ OpenRouter Missing")
+                st.error("❌ Groq Missing")
         with col2:
             if self.config.together_api_key:
-                st.success("✅ Together AI Connected")
+                st.success("✅ Together AI Fallback Ready")
             else:
                 st.warning("⚠️ Together AI Missing (Fallback Disabled)")
 

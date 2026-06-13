@@ -1,17 +1,12 @@
 import time
 from typing import Iterator, Optional, Any
-from together import Together as TogetherSDK
+from groq import Groq as GroqSDK
 from .responses import LLMResponse, LLMStreamChunk
 
 
-class TogetherAIClient:
-    def __init__(self, api_key: Optional[str] = None, _client: Optional[Any] = None):
-        self._client = (
-            _client
-            if _client is not None
-            else TogetherSDK(api_key=api_key) if api_key
-            else TogetherSDK()
-        )
+class GroqClient:
+    def __init__(self, api_key: str, _client: Optional[Any] = None):
+        self._client = _client if _client is not None else GroqSDK(api_key=api_key)
 
     def call(
         self,
@@ -42,20 +37,10 @@ class TogetherAIClient:
 
                 if response.choices and len(response.choices) > 0:
                     text_out = response.choices[0].message.content or ""
-                    usage_info = {}
-                    if hasattr(response, "usage") and response.usage:
-                        usage_info = {
-                            "prompt_tokens": getattr(response.usage, "prompt_tokens", 0),
-                            "completion_tokens": getattr(
-                                response.usage, "completion_tokens", 0
-                            ),
-                            "total_tokens": getattr(response.usage, "total_tokens", 0),
-                        }
                     return LLMResponse(
                         ok=True,
                         text=text_out.strip(),
                         elapsed=elapsed,
-                        usage=usage_info,
                         raw=response,
                     )
                 return LLMResponse(
@@ -63,19 +48,6 @@ class TogetherAIClient:
                 )
 
             except Exception as e:
-                error_msg = str(e)
-                if "404" in error_msg or "not found" in error_msg.lower():
-                    return LLMResponse(
-                        ok=False,
-                        error=f"Model '{model_id}' not found",
-                        elapsed=time.time() - start if "start" in dir() else None,
-                    )
-                if "401" in error_msg or "unauthorized" in error_msg.lower():
-                    return LLMResponse(
-                        ok=False,
-                        error="Authentication failed",
-                        elapsed=time.time() - start if "start" in dir() else None,
-                    )
                 if attempt == retries:
                     return LLMResponse(
                         ok=False, error=str(e), elapsed=time.time() - start
@@ -127,12 +99,6 @@ class TogetherAIClient:
                 return
 
             except Exception as e:
-                error_msg = str(e)
-                if "404" in error_msg or "not found" in error_msg.lower():
-                    yield LLMStreamChunk(
-                        ok=False, error=f"Model '{model_id}' not found"
-                    )
-                    return
                 if attempt == retries:
                     yield LLMStreamChunk(ok=False, error=str(e))
                     return

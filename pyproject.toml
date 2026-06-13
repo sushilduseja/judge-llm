@@ -5,27 +5,25 @@ build-backend = "hatchling.build"
 [project]
 name = "judge-llm"
 version = "1.0.0"
-authors = [
-  { name="Author", email="author@example.com" },
-]
-description = "A tool to compare and judge LLM model outputs"
+description = "Compare AI models side-by-side with automatic fallback"
 readme = "README.md"
-requires-python = ">=3.8"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
+requires-python = ">=3.10"
 dependencies = [
     "streamlit>=1.32.0",
-    "requests>=2.31.0",
     "python-dotenv>=1.0.0",
     "pydantic>=2.6.1",
-    "rich>=13.7.0",
-    "streamlit-option-menu>=0.3.12",
-    "streamlit-extras>=0.3.6"
+    "pydantic-settings>=2.0",
+    "streamlit-extras>=0.3.6",
+    "together>=1.0.0",
+    "groq>=0.12.0",
 ]
 
-[project.urls]
-Homepage = "https://github.com/username/judge-llm"
-Issues = "https://github.com/username/judge-llm/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/"]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0",
+    "pytest-mock>=3.0",
+]
